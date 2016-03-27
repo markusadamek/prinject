@@ -1,6 +1,6 @@
 language: csharp
 solution: prinject/prinject.sln
 before_install:
-  - sudo apt-get install nunit-console
-  after_script:
-  - nunit-console prinject/DependencyHandlerTests/bin/Release/DependencyHandlerTests.dll
+  -sudo apt-get install nunit-console
+after_script:
+  -nunit-console prinject/DependencyHandlerTests/bin/Release/DependencyHandlerTests.dll
