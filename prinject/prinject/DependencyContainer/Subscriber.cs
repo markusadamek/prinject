@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace prinject.DependencyContainer
 {
-    internal class Subscriber
+    public class Subscriber
     {
-        private WeakReference _internalref;
+        private WeakReference<object> _internalref;
 
         private Dictionary<Type, MethodInfo> _setDictionary;
 
@@ -21,20 +21,21 @@ namespace prinject.DependencyContainer
         public Subscriber(object t)
         {
             
-            _internalref = new WeakReference(t);
+            _internalref = new WeakReference<object>(t);
             findDependencies(t);
             
         }
 
         private void findDependencies(object obj)
         {
-            _setDictionary = (from prop in obj.GetType().GetProperties() where obj.GetType().IsPublic && prop.CanWrite && prop.CustomAttributes.Any(attr => attr.AttributeType == typeof(ResolveAttribute)) select new KeyValuePair<Type,MethodInfo>(prop.DeclaringType,prop.SetMethod)).ToDictionary( p => p.Key,p=> p.Value);
+            _setDictionary = (from prop in obj.GetType().GetProperties() where obj.GetType().IsPublic && prop.CanWrite && prop.CustomAttributes.Any(attr => attr.AttributeType == typeof(ResolveAttribute)) select new KeyValuePair<Type,MethodInfo>(prop.PropertyType,prop.SetMethod)).ToDictionary( p => p.Key,p=> p.Value);
 
         }
 
         public bool IsReferenceValid()
         {
-            return _internalref.IsAlive;
+            object t;
+            return _internalref.TryGetTarget(out t);
         }
 
         public void SetDepencency(Type t, object o)
@@ -42,16 +43,21 @@ namespace prinject.DependencyContainer
             if (!Dependencies.Contains(t))
                 throw new DependencyException("Dependency does not contain given Type");
 
-            if(!IsReferenceValid())
+            object obj;
+            if (!_internalref.TryGetTarget(out obj))
                 throw new DependencyException("Reference is not valid");
 
-            _setDictionary[t].Invoke(_internalref.Target, new object[] { o });
+            _setDictionary[t].Invoke(obj, new object[] { o });
 
         }
 
         public bool IsObject(object check)
         {
-            return object.ReferenceEquals(_internalref.Target, check);
+            object obj;
+            if (!_internalref.TryGetTarget(out obj))
+                throw new DependencyException("Reference is not valid");
+
+            return object.ReferenceEquals(obj, check);
         }
 
        

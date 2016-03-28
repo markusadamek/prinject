@@ -50,13 +50,9 @@ namespace prinject
             else
                 _dependencies[t] = obj;
 
+            removeLostReferences();
             foreach (Subscriber s in _subscriptions.Where(subscr => subscr.Dependencies.Contains(t)))
-            {
-                if (s.IsReferenceValid())
-                    s.SetDepencency(t, obj);
-                else
-                    _subscriptions.Remove(s);
-            }
+                s.SetDepencency(t, obj);
         }
 
         /// <summary>
@@ -79,6 +75,21 @@ namespace prinject
         }
 
         /// <summary>
+        /// Uninstalls all Dependencies created from this object
+        /// </summary>
+        /// <param name="o">The o.</param>
+        public void UnInstallDependency(object o)
+        {
+            List<Type> to_remove = new List<Type>();
+            foreach (var t in _dependencies.Where(p => ReferenceEquals(p.Value, o)))
+                to_remove.Add(t.Key);
+
+            foreach (var item in to_remove)
+                UnInstallDependency(item);
+
+        }
+
+        /// <summary>
         /// Uninstalls the install dependency.
         /// sets all depending properties to null
         /// </summary>
@@ -89,17 +100,28 @@ namespace prinject
             if (!_dependencies.ContainsKey(t))
                 throw new DependencyException("No such dependency installed!");
 
+            removeLostReferences();
             foreach (Subscriber subscr in _subscriptions.Where(types => types.Dependencies.Contains(t)))
             {
-                if (!subscr.IsReferenceValid())
-                    _subscriptions.Remove(subscr);
-                else
-                    subscr.SetDepencency(t, null);
+                subscr.SetDepencency(t, null);
             }
+
 
             _dependencies.Remove(t);
 
         }
+
+        private void removeLostReferences()
+        {
+            List<Subscriber> toremove = new List<Subscriber>();
+            foreach (Subscriber subscr in _subscriptions)
+                if (!subscr.IsReferenceValid())
+                    toremove.Add(subscr);
+
+            foreach (var item in toremove)
+                _subscriptions.Remove(item);
+        }
+
 
 
 
@@ -110,10 +132,22 @@ namespace prinject
         /// <exception cref="DependencyException">Object is already Subscribed</exception>
         public void Subscribe(object o)
         {
+            removeLostReferences();
             if (_subscriptions.Any(t => t.IsObject(o)))
                 throw new DependencyException("Object is already Subscribed");
 
-            _subscriptions.Add(new Subscriber(o));
+            var subscr = new Subscriber(o);
+
+            _subscriptions.Add(subscr);
+
+            foreach (Type t in subscr.Dependencies)
+            {
+                if (_dependencies.ContainsKey(t))
+                    subscr.SetDepencency(t, _dependencies[t]);
+                else
+                    subscr.SetDepencency(t, null);
+            }
+
         }
 
         /// <summary>

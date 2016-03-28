@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>DependencyHandlerTests</RootNamespace>
     <AssemblyName>DependencyHandlerTests</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -45,6 +46,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HandlerTests.cs" />
+    <Compile Include="Mockings\IMock.cs" />
+    <Compile Include="Mockings\MockingDependency.cs" />
+    <Compile Include="Mockings\MockingDependencyWABase.cs" />
+    <Compile Include="Mockings\MockingDependor.cs" />
+    <Compile Include="Mockings\MockingDependorWABase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
