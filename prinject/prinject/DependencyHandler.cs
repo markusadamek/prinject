@@ -152,6 +152,7 @@ namespace prinject
 
         /// <summary>
         /// Unsubscribes the specified object from the DependencyHandler
+        /// all dependencies are set to null
         /// </summary>
         /// <param name="o">The object</param>
         /// <exception cref="DependencyException">Object has no subscription</exception>
@@ -162,6 +163,11 @@ namespace prinject
 
             var subscribor = _subscriptions.Find(t => t.IsObject(o));
 
+            foreach (var item in subscribor.Dependencies)
+            {
+                subscribor.SetDepencency(item, null);
+            }
+           
             _subscriptions.Remove(subscribor);
         }
 

@@ -87,5 +87,16 @@ namespace DependencyHandlerTests
             Assert.That(subscr.IsReferenceValid(),Is.False);
             Assert.That(() => subscr.SetDepencency(typeof(MockingDependency), null), Throws.Exception.TypeOf<DependencyException>());
         }
+
+        [Test]
+        public void TestUnsubscribe()
+        {
+            MockingDependor dependor = new MockingDependor();
+            MockingDependency dependency = new MockingDependency();
+            DependencyHandler.Instance.InstallDependency<MockingDependency>(dependency);
+            DependencyHandler.Instance.Subscribe(dependor);
+            DependencyHandler.Instance.Unsubscribe(dependor);
+            Assert.That(dependor.Depend, Is.Null);
+        }
     }
 }
