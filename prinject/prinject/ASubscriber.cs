@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 
 namespace prinject
 {
+    /// <summary>
+    /// Abstract class that automatically subscribs
+    /// the instance to the active Handler
+    /// </summary>
     public abstract class ASubscriber
     {
         public ASubscriber()

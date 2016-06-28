@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 namespace prinject
 {
 
+    /// <summary>
+    /// DependencyHandler os able to resolve properties with the Attribute [Resolve]
+    /// </summary>
     public class DependencyHandler
     {
         private static DependencyHandler _handler = null;
@@ -38,6 +41,31 @@ namespace prinject
             }
         }
 
+
+        /// <summary>
+        /// Determines whether the specified object is dependency.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="obj">The object.</param>
+        /// <returns></returns>
+        public bool IsDependency<T>(object obj)
+        {
+            return IsDependency(typeof(T), obj);
+        }
+
+        /// <summary>
+        /// Determines whether the specified t is dependency.
+        /// </summary>
+        /// <param name="t">The t.</param>
+        /// <param name="obj">The object.</param>
+        /// <returns></returns>
+        public bool IsDependency(Type t, object obj)
+        {
+            if (!_dependencies.ContainsKey(t))
+                return false;
+
+            return (_dependencies[t].Equals(obj));
+        }
         /// <summary>
         ///
         /// </summary>
@@ -111,6 +139,9 @@ namespace prinject
 
         }
 
+        /// <summary>
+        /// Removes the lost references.
+        /// </summary>
         private void removeLostReferences()
         {
             List<Subscriber> toremove = new List<Subscriber>();
@@ -133,7 +164,7 @@ namespace prinject
         public void Subscribe(object o)
         {
             removeLostReferences();
-            if (_subscriptions.Any(t => t.IsObject(o)))
+            if (_subscriptions.Any(t => t.CompareToObject(o)))
                 throw new DependencyException("Object is already Subscribed");
 
             var subscr = new Subscriber(o);
@@ -158,10 +189,10 @@ namespace prinject
         /// <exception cref="DependencyException">Object has no subscription</exception>
         public void Unsubscribe(object o)
         {
-            if (!_subscriptions.Any(t => t.IsObject(o)))
+            if (!_subscriptions.Any(t => t.CompareToObject(o)))
                 throw new DependencyException("Object has no subscription");
 
-            var subscribor = _subscriptions.Find(t => t.IsObject(o));
+            var subscribor = _subscriptions.Find(t => t.CompareToObject(o));
 
             foreach (var item in subscribor.Dependencies)
             {

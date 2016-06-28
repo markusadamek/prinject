@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DependencyHandlerTests
@@ -13,7 +14,7 @@ namespace DependencyHandlerTests
     [TestFixture]
     public class HandlerTests
     {
-        
+
         [Test]
         public void SimpleDependencyTest()
         {
@@ -31,10 +32,9 @@ namespace DependencyHandlerTests
             MockingDependorWABase subscr = new MockingDependorWABase();
             using (ADependency dep = new MockingDependencyWABase())
             {
-                
                 Assert.That(subscr.Depend, Is.EqualTo(dep));
             }
-          
+
             GC.Collect();
             GC.WaitForPendingFinalizers();
             Assert.That(subscr.Depend, Is.EqualTo(null));
@@ -49,10 +49,10 @@ namespace DependencyHandlerTests
             MockingDependency dependency = new MockingDependency();
             DependencyHandler.Instance.InstallDependency<MockingDependency>(dependency);
             DependencyHandler.Instance.Subscribe(dependor);
-            Assert.That(dependor.Depend,Is.EqualTo(dependency));
+            Assert.That(dependor.Depend, Is.EqualTo(dependency));
             DependencyHandler.Instance.UnInstallDependency<MockingDependency>();
-            Assert.That(dependor.Depend,Is.Null);
-           
+            Assert.That(dependor.Depend, Is.Null);
+
         }
 
         [Test]
@@ -72,20 +72,22 @@ namespace DependencyHandlerTests
         {
             MockingDependor dependor = new MockingDependor();
             Subscriber subscr = new Subscriber(dependor);
-            Assert.That(subscr.Dependencies.Length, Is.EqualTo(1));
+            Assert.That(subscr.Dependencies.Length, Is.EqualTo(1), "Number of Dependencies wrong");
             Assert.That(subscr.Dependencies[0], Is.EqualTo(typeof(MockingDependency)));
-            Assert.That(subscr.IsObject(subscr),Is.False);
-            Assert.That(subscr.IsObject(dependor), Is.True);
-            Assert.That(subscr.IsReferenceValid());
+            Assert.That(subscr.CompareToObject(subscr), Is.False, "Object check wrong");
+            Assert.That(subscr.CompareToObject(dependor), Is.True, "object check wrong");
+            Assert.That(subscr.IsReferenceValid(), Is.True, "Reference not valid");
             Assert.That(() => subscr.SetDepencency(typeof(object), new object()), Throws.Exception.TypeOf<DependencyException>());
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            Assert.That(subscr.IsReferenceValid(), Is.True);
+            Thread.Sleep(100);
+            Assert.That(subscr.IsReferenceValid(), Is.False, "Reference is still valid");
             dependor = null;
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            Assert.That(subscr.IsReferenceValid(),Is.False);
-            Assert.That(() => subscr.SetDepencency(typeof(MockingDependency), null), Throws.Exception.TypeOf<DependencyException>());
+            Assert.That(subscr.TrySetDependency<MockingDependency>(new object()), Is.False, "Check if Weak reference can still retrieve object with tryset");
+            Assert.That(subscr.IsReferenceValid(), Is.False, "Check if Weak reference can still retrieve object");
+            Assert.That(() => subscr.SetDepencency(typeof(MockingDependency), null), Throws.Exception.TypeOf<DependencyException>(), "Dependency still exists");
         }
 
         [Test]
@@ -97,6 +99,26 @@ namespace DependencyHandlerTests
             DependencyHandler.Instance.Subscribe(dependor);
             DependencyHandler.Instance.Unsubscribe(dependor);
             Assert.That(dependor.Depend, Is.Null);
+        }
+
+        [Test]
+        public void TestResolvingCheck()
+        {
+            MockingDependor dependor = new MockingDependor();
+            Subscriber subscr = new Subscriber(dependor);
+            Assert.That(!subscr.IsDependencyResolved());
+            subscr.SetDepencency(typeof(MockingDependency), new MockingDependency());
+            Assert.That(subscr.IsDependencyResolved());
+
+            MockingDepCheck dep = new MockingDepCheck();
+            Subscriber subscr2 = new Subscriber(dep);
+            Assert.That(!subscr2.IsDependencyResolved());
+            subscr2.SetDepencency(typeof(string), "  ");
+            Assert.That(!subscr2.IsDependencyResolved());
+
+            subscr2.SetDepencency(typeof(object), new object());
+            Assert.That(subscr2.IsDependencyResolved());
+
         }
     }
 }

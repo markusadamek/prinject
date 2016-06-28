@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="HandlerTests.cs" />
     <Compile Include="Mockings\IMock.cs" />
+    <Compile Include="Mockings\MockingDepCheck.cs" />
     <Compile Include="Mockings\MockingDependency.cs" />
     <Compile Include="Mockings\MockingDependencyWABase.cs" />
     <Compile Include="Mockings\MockingDependor.cs" />
