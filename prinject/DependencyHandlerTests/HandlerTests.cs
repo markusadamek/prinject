@@ -78,13 +78,11 @@ namespace DependencyHandlerTests
             Assert.That(subscr.CompareToObject(dependor), Is.True, "object check wrong");
             Assert.That(subscr.IsReferenceValid(), Is.True, "Reference not valid");
             Assert.That(() => subscr.SetDepencency(typeof(object), new object()), Throws.Exception.TypeOf<DependencyException>());
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            Thread.Sleep(100);
-            Assert.That(subscr.IsReferenceValid(), Is.False, "Reference is still valid");
             dependor = null;
             GC.Collect();
             GC.WaitForPendingFinalizers();
+            GC.WaitForFullGCComplete();
+            Assert.That(subscr.IsReferenceValid(), Is.False, "Reference is still valid; Fails in Release mode");
             Assert.That(subscr.TrySetDependency<MockingDependency>(new object()), Is.False, "Check if Weak reference can still retrieve object with tryset");
             Assert.That(subscr.IsReferenceValid(), Is.False, "Check if Weak reference can still retrieve object");
             Assert.That(() => subscr.SetDepencency(typeof(MockingDependency), null), Throws.Exception.TypeOf<DependencyException>(), "Dependency still exists");

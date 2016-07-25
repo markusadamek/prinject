@@ -1,5 +1,6 @@
 ﻿using prinject.DependencyContainer;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,16 +15,16 @@ namespace prinject
     public class DependencyHandler
     {
         private static DependencyHandler _handler = null;
-        private Dictionary<Type, object> _dependencies;
-        private List<Subscriber> _subscriptions;
+        private ConcurrentDictionary<Type, object> _dependencies;
+        private ConcurrentBag<Subscriber> _subscriptions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DependencyHandler"/> class.
         /// </summary>
         public DependencyHandler()
         {
-            _dependencies = new Dictionary<Type, object>();
-            _subscriptions = new List<Subscriber>();
+            _dependencies = new ConcurrentDictionary<Type, object>();
+            _subscriptions = new ConcurrentBag<Subscriber>();
         }
 
         /// <summary>
@@ -36,8 +37,7 @@ namespace prinject
         {
             get
             {
-                _handler = _handler ?? new DependencyHandler();
-                return _handler;
+                return _handler = _handler ?? new DependencyHandler();
             }
         }
 
@@ -74,7 +74,7 @@ namespace prinject
         public void InstallDependency(Type t, object obj)
         {
             if (!_dependencies.ContainsKey(t))
-                _dependencies.Add(t, obj);
+                _dependencies.TryAdd(t, obj);
             else
                 _dependencies[t] = obj;
 
@@ -134,8 +134,8 @@ namespace prinject
                 subscr.SetDepencency(t, null);
             }
 
-
-            _dependencies.Remove(t);
+            object output = null;
+            _dependencies.TryRemove(t, out output);
 
         }
 
@@ -144,13 +144,8 @@ namespace prinject
         /// </summary>
         private void removeLostReferences()
         {
-            List<Subscriber> toremove = new List<Subscriber>();
-            foreach (Subscriber subscr in _subscriptions)
-                if (!subscr.IsReferenceValid())
-                    toremove.Add(subscr);
 
-            foreach (var item in toremove)
-                _subscriptions.Remove(item);
+            _subscriptions = new ConcurrentBag<Subscriber>(_subscriptions.Except(_subscriptions.Where(rem => !rem.IsReferenceValid())));
         }
 
 
@@ -189,17 +184,17 @@ namespace prinject
         /// <exception cref="DependencyException">Object has no subscription</exception>
         public void Unsubscribe(object o)
         {
-            if (!_subscriptions.Any(t => t.CompareToObject(o)))
+
+            var subscriber = _subscriptions.Where(t => t.CompareToObject(o)).FirstOrDefault();
+
+            if (subscriber == null)
                 throw new DependencyException("Object has no subscription");
 
-            var subscribor = _subscriptions.Find(t => t.CompareToObject(o));
+            foreach (var item in subscriber.Dependencies)
+                subscriber.SetDepencency(item, null);
 
-            foreach (var item in subscribor.Dependencies)
-            {
-                subscribor.SetDepencency(item, null);
-            }
-           
-            _subscriptions.Remove(subscribor);
+
+            _subscriptions = new ConcurrentBag<Subscriber>(_subscriptions.Except(new[] { subscriber }));
         }
 
     }
