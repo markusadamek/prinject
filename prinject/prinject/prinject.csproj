@@ -43,6 +43,7 @@
   <ItemGroup>
     <Compile Include="ADependency.cs" />
     <Compile Include="ASubscriber.cs" />
+    <Compile Include="DependencyChangedEventArgs.cs" />
     <Compile Include="DependencyContainer\Subscriber.cs" />
     <Compile Include="DependencyException.cs" />
     <Compile Include="DependencyHandler.cs" />

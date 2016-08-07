@@ -10,13 +10,25 @@ namespace prinject
 {
 
     /// <summary>
+    /// delegate when dependency changed
+    /// </summary>
+    /// <param name="sender">DependencyHandler or Subscriber</param>
+    /// <param name="e">The <see cref="DependencyChangedEventArgs"/> instance containing the event data.</param>
+    public delegate void DependencyChanged(object sender, DependencyChangedEventArgs e);
+    /// <summary>
     /// DependencyHandler os able to resolve properties with the Attribute [Resolve]
     /// </summary>
     public class DependencyHandler
     {
+
+        /// <summary>
+        /// Occurs when a dependency has changed.
+        /// </summary>
+        public event DependencyChanged DependencyChanged;
         private static DependencyHandler _handler = null;
         private ConcurrentDictionary<Type, object> _dependencies;
         private ConcurrentBag<Subscriber> _subscriptions;
+        private ConcurrentBag<KeyValuePair<object,DependencyChanged>> _eventMapping;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DependencyHandler"/> class.
@@ -25,6 +37,7 @@ namespace prinject
         {
             _dependencies = new ConcurrentDictionary<Type, object>();
             _subscriptions = new ConcurrentBag<Subscriber>();
+            _eventMapping = new ConcurrentBag<KeyValuePair<object, DependencyChanged>>();
         }
 
         /// <summary>
@@ -39,6 +52,12 @@ namespace prinject
             {
                 return _handler = _handler ?? new DependencyHandler();
             }
+        }
+
+
+        protected void OnDependencyChanged(Type t, object olditem, object newitem)
+        {
+            DependencyChanged?.Invoke(this, new DependencyChangedEventArgs(t, olditem, newitem));
         }
 
 
@@ -163,7 +182,7 @@ namespace prinject
                 throw new DependencyException("Object is already Subscribed");
 
             var subscr = new Subscriber(o);
-
+            subscr.DependencyChanged += Subscr_DependencyChanged;
             _subscriptions.Add(subscr);
 
             foreach (Type t in subscr.Dependencies)
@@ -174,6 +193,45 @@ namespace prinject
                     subscr.SetDepencency(t, null);
             }
 
+        }
+
+        /// <summary>
+        /// Subscribes to object change.
+        /// </summary>
+        /// <param name="o">The object changed to which to subscribe</param>
+        /// <param name="e">The dependencyChanged </param>
+        public void SubscribeToObjectChange(object o, DependencyChanged e)
+        {
+            foreach (var s in _subscriptions)
+            {
+                if (s.CompareToObject(o))
+                    s.DependencyChanged += e;
+            }
+        }
+
+
+        /// <summary>
+        /// UnSubscribes to object change.
+        /// </summary>
+        /// <param name="o">The object changed to which to subscribe</param>
+        /// <param name="e">The dependencyChanged </param>
+        public void UnSubscribeFromObjectChange(object o, DependencyChanged e)
+        {
+            foreach (var s in _subscriptions)
+            {
+                if (s.CompareToObject(o))
+                    s.DependencyChanged -= e;
+            }
+        }
+
+        /// <summary>
+        /// forward subscription changes
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="DependencyChangedEventArgs"/> instance containing the event data.</param>
+        private void Subscr_DependencyChanged(object sender, DependencyChangedEventArgs e)
+        {
+            OnDependencyChanged(e.DependencyType, e.OldItem, e.NewItem);
         }
 
         /// <summary>

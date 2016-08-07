@@ -118,5 +118,41 @@ namespace DependencyHandlerTests
             Assert.That(subscr2.IsDependencyResolved());
 
         }
+
+        [Test]
+        public void CheckEvents()
+        {
+            DependencyHandler handler = new DependencyHandler();
+            MockingDependor dependor = new MockingDependor();
+            MockingDependency dependency = new MockingDependency();
+            DependencyChangedEventArgs fullArgs = null;
+            handler.DependencyChanged += (s, e) => fullArgs = e;
+            handler.Subscribe(dependor);
+
+            DependencyChangedEventArgs args = null;
+            
+            DependencyChanged ev=(s, e) => { args = e; };
+            handler.SubscribeToObjectChange(dependor, ev);
+
+            handler.InstallDependency(dependency);
+
+            Assert.That(args.OldItem == null);
+            Assert.That(args.NewItem == dependency);
+
+            Assert.That(fullArgs.OldItem == null);
+            Assert.That(fullArgs.NewItem == dependency);
+
+
+            fullArgs = null;
+            args = null;
+            handler.UnSubscribeFromObjectChange(dependor, ev);
+
+            handler.UnInstallDependency(dependency);
+            Assert.That(args == null);
+
+            Assert.That(fullArgs.NewItem == null);
+            Assert.That(fullArgs.OldItem == dependency);
+        }
+
     }
 }

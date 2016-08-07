@@ -7,14 +7,22 @@ using System.Threading.Tasks;
 
 namespace prinject.DependencyContainer
 {
+
+
     /// <summary>
     /// Creates a weak reference and changes all marked types
     /// </summary>
     public class Subscriber
     {
+
         private WeakReference<object> _internalref;
 
         private Dictionary<Type, PropertyInfo> _setDictionary;
+
+        /// <summary>
+        /// Occurs when the dependency changes
+        /// </summary>
+        public event DependencyChanged DependencyChanged;
 
         /// <summary>
         /// Available Dependencies of the Subscriber
@@ -26,6 +34,8 @@ namespace prinject.DependencyContainer
         {
             get { return _setDictionary.Keys.ToArray(); }
         }
+
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscriber"/> class.
@@ -40,12 +50,27 @@ namespace prinject.DependencyContainer
 
         }
 
+        /// <summary>
+        /// sets the dependency dictionary
+        /// </summary>
+        /// <param name="obj">The object.</param>
         private void findDependencies(object obj)
         {
             _setDictionary = (from prop in obj.GetType().GetProperties() where obj.GetType().IsPublic && prop.CanWrite && prop.CustomAttributes.Any(attr => attr.AttributeType == typeof(ResolveAttribute)) select new KeyValuePair<Type, PropertyInfo>(prop.PropertyType, prop)).ToDictionary(p => p.Key, p => p.Value);
 
         }
 
+        /// <summary>
+        /// Determines whether the dependency is resolved.
+        /// </summary>
+        /// <returns>
+        ///   <c>true</c> if [is dependency resolved]; otherwise, <c>false</c>.
+        /// </returns>
+        /// <exception cref="DependencyException">
+        /// Object does not exist anymore
+        /// or
+        /// Unkown dependency flag
+        /// </exception>
         public bool IsDependencyResolved()
         {
             object obj = null;
@@ -115,8 +140,23 @@ namespace prinject.DependencyContainer
             if (!_internalref.TryGetTarget(out obj))
                 throw new DependencyException("Reference is not valid");
 
+            setDependencyInternal(t, o, obj);
+
+        }
+
+        /// <summary>
+        /// Sets the dependency internal.
+        /// </summary>
+        /// <param name="t">type to set</param>
+        /// <param name="o">object to set</param>
+        /// <param name="obj">reference to the object (resolved weakref)</param>
+        private void setDependencyInternal(Type t, object o, object obj)
+        {
+
+            object old = _setDictionary[t].GetMethod.Invoke(obj, new object[] { });
             _setDictionary[t].SetMethod.Invoke(obj, new object[] { o });
 
+            OnDependencyChanged(t, old, o);
         }
 
         /// <summary>
@@ -128,10 +168,15 @@ namespace prinject.DependencyContainer
         public bool TrySetDependency<T>(object dep)
         {
             object obj = null;
+
+            if (!Dependencies.Contains(typeof(T)))
+                return false;
+
+
             if (!_internalref.TryGetTarget(out obj))
                 return false;
 
-            _setDictionary[typeof(T)].SetMethod.Invoke(obj, new object[] { dep });
+            setDependencyInternal(typeof(T), dep, obj);
             return true;
         }
 
@@ -150,6 +195,17 @@ namespace prinject.DependencyContainer
             return object.ReferenceEquals(obj, check);
         }
 
+
+        /// <summary>
+        /// Called when [dependency changed].
+        /// </summary>
+        /// <param name="t">The t.</param>
+        /// <param name="olditem">The olditem.</param>
+        /// <param name="newitem">The newitem.</param>
+        private void OnDependencyChanged(Type t, object olditem, object newitem)
+        {
+            DependencyChanged?.Invoke(this, new DependencyChangedEventArgs(t, olditem, newitem));
+        }
 
 
     }
